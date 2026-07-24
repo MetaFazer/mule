@@ -7,196 +7,369 @@ import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
-// ─── 🤖 Agent Workbench Panel ────────────────────────────────────────────────
+// ─── 🤖 Agent Workbench Panel (Smooth Claude Light Theme) ─────────────────────
 function AgentWorkbenchPanel() {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [selectedModel, setSelectedModel] = useState('MuleTrace Hybrid GNN v1.1')
+  const [showTrace, setShowTrace] = useState(false)
 
-  const PRESET_QUERIES = [
-    "Find structuring patterns in the last 30 days",
-    "Which customers made 10+ transactions under $10,000?",
-    "Is customer ACC-00001 suspicious?",
-    "Perform automated EDA on high-volume transactions",
-    "Scan for rapid cash-out velocity anomalies",
+  const PRESET_SUGGESTIONS = [
+    {
+      icon: 'manage_search',
+      title: 'Structuring Scan',
+      query: 'Find structuring patterns in the last 30 days',
+      desc: 'Detect sub-$10k transfers designed to evade CTR reporting thresholds',
+    },
+    {
+      icon: 'filter_alt',
+      title: 'Threshold Evasion',
+      query: 'Which customers made 10+ transactions under $10,000?',
+      desc: 'Flag high-frequency sub-threshold transfer aggregations',
+    },
+    {
+      icon: 'person_search',
+      title: 'Single Entity Audit',
+      query: 'Is customer ACC-00001 suspicious?',
+      desc: 'Run on-demand XAI attribution and neighbor graph lookup',
+    },
+    {
+      icon: 'insights',
+      title: 'Automated Profiling',
+      query: 'Perform automated EDA on high-volume transactions',
+      desc: 'Compute channel distributions and baseline volume stats',
+    },
   ]
+
+  const getGreetingTime = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'morning'
+    if (hour < 18) return 'afternoon'
+    return 'evening'
+  }
 
   const runQuery = async (q) => {
     const text = q || query
     if (!text.trim()) return
-    setLoading(true); setError(null); setResult(null)
+    setLoading(true); setError(null); setResult(null); setShowTrace(false)
     try {
       const res = await fetch(`${API_BASE}/api/agent/query`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: text })
+        body: JSON.stringify({ query: text, strategy: selectedModel })
       })
       if (!res.ok) throw new Error(`API error ${res.status}`)
-      setResult(await res.json())
+      const data = await res.json()
+      setResult(data)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
 
-  const intentColor = {
-    STRUCTURING_DETECTION: '#f59e0b', AGGREGATION_THRESHOLD: '#8b5cf6',
-    SINGLE_ENTITY_LOOKUP: '#06b6d4', BROAD_EDA_EXPLORATION: '#10b981',
-    RAPID_CASHOUT_VELOCITY: '#ef4444', HYBRID_PATTERN_SCAN: '#3b82f6',
-  }
-
   return (
-    <div className="max-w-7xl mx-auto">
-      <header className="flex items-center gap-4 mb-8 glass-card rounded-2xl p-6 border border-outline-variant">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-tertiary flex items-center justify-center shadow-lg">
-          <span className="material-symbols-outlined text-on-primary text-2xl">smart_toy</span>
+    <div className="max-w-4xl mx-auto py-8 px-4 space-y-9 font-sans">
+      {/* ── Center Hero Greeting ── */}
+      <div className="text-center space-y-3 pt-2">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-semibold tracking-wide">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          MuleTrace AI Intelligence
         </div>
-        <div>
-          <h1 className="font-headline text-3xl font-bold text-on-surface">Autonomous Agent Workbench</h1>
-          <p className="text-on-surface-variant text-sm mt-1">Query-driven agentic AML engine — dynamically builds execution plans based on analyst intent</p>
-        </div>
-      </header>
+        <h1 className="font-headline text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+          Good {getGreetingTime()}, Analyst
+        </h1>
+        <p className="text-slate-500 text-base max-w-md mx-auto font-normal">
+          How can I assist your compliance investigation today?
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Query Input + Execution Trace */}
-        <div className="glass-card rounded-2xl p-6 border border-outline-variant space-y-5">
-          <h2 className="text-lg font-semibold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">chat</span> Natural Language Query
-          </h2>
-          <div className="flex gap-3">
-            <input
-              className="flex-1 px-4 py-3 rounded-xl bg-surface-container border border-outline-variant text-on-surface text-sm outline-none focus:border-primary transition-colors"
-              placeholder='e.g. "Find structuring patterns in the last 30 days"'
-              value={query} onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && runQuery()}
-            />
-            <button onClick={() => runQuery()} disabled={loading}
-              className="px-5 py-3 rounded-xl bg-primary text-on-primary font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2">
-              {loading ? <span className="material-symbols-outlined text-sm">progress_activity</span> : <span className="material-symbols-outlined text-sm">send</span>}
-              {loading ? 'Running...' : 'Run'}
-            </button>
+      {/* ── Claude-Style Floating Prompt Bar (100% Seamless Light Theme) ── */}
+      <div className="bg-white border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] rounded-[26px] p-5 sm:p-6 transition-all duration-200">
+        <div className="flex flex-col gap-4">
+          {/* Main Input Textarea - Completely borderless & outline-free */}
+          <textarea
+            rows={2}
+            style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+            className="w-full bg-transparent text-slate-900 placeholder:text-slate-400 text-base sm:text-lg leading-relaxed outline-none border-none focus:outline-none focus:border-none focus:ring-0 shadow-none resize-none font-sans"
+            placeholder="How can I help you today?"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                runQuery()
+              }
+            }}
+          />
+
+          {/* Bottom Action Bar */}
+          <div className="flex items-center justify-between gap-3 pt-2">
+            {/* Left side empty space / clean layout */}
+            <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>MuleTrace Agent</span>
+            </div>
+
+            {/* Right Controls: Model Strategy Selector + Run Pill */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <select
+                value={selectedModel}
+                onChange={e => setSelectedModel(e.target.value)}
+                style={{ outline: 'none' }}
+                className="bg-slate-100/90 hover:bg-slate-200/90 text-slate-700 font-semibold text-xs py-1.5 px-3 rounded-full border-0 outline-none focus:outline-none focus:ring-0 cursor-pointer transition-colors"
+              >
+                <option value="MuleTrace Hybrid GNN v1.1">MuleTrace Hybrid GNN v1.1</option>
+                <option value="Structuring Scan">Structuring Scan</option>
+                <option value="Fast Rule Engine">Fast Rule Engine</option>
+                <option value="Single Entity Audit">Single Entity Audit</option>
+              </select>
+
+              <button
+                onClick={() => runQuery()}
+                disabled={loading || !query.trim()}
+                className="px-5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm disabled:opacity-30 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                    <span>Running...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Run</span>
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Suggestion Boxes Below Search Bar ── */}
+      {!result && !loading && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Suggested AML Investigations
+            </span>
+            <span className="text-xs text-slate-400 font-normal">Click to populate query</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {PRESET_SUGGESTIONS.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => setQuery(item.query)}
+                className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                    <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                  </div>
+                  <span className="material-symbols-outlined text-base text-slate-300 group-hover:text-slate-500 transition-colors">
+                    edit
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-800 text-sm group-hover:text-slate-900 transition-colors">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed font-normal">
+                    {item.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Loading Spinner ── */}
+      {loading && (
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-8 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-bounce">
+            <span className="material-symbols-outlined text-2xl animate-spin">smart_toy</span>
           </div>
           <div>
-            <p className="text-xs text-on-surface-variant uppercase tracking-widest font-semibold mb-3">Hackathon Benchmark Queries</p>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_QUERIES.map((q, i) => (
-                <button key={i} onClick={() => { setQuery(q); runQuery(q) }}
-                  className="text-xs px-3 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors font-medium">{q}</button>
-              ))}
-            </div>
+            <h3 className="font-semibold text-slate-800 text-base">Agent Orchestrator Executing Plan</h3>
+            <p className="text-xs text-slate-500 mt-1">Parsing query intent, evaluating graph topology, and scanning transaction signals...</p>
           </div>
-          {result && (
-            <div className="pt-4 border-t border-outline-variant">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-on-surface-variant uppercase tracking-widest font-semibold">Agent Execution Trace</p>
-                <span className="text-xs font-mono text-tertiary">{result.execution_time_ms}ms</span>
-              </div>
-              <div className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3"
-                style={{ background: `${(intentColor[result.intent]||'#6b7280')}22`, color: intentColor[result.intent]||'#6b7280', border: `1px solid ${(intentColor[result.intent]||'#6b7280')}44` }}>
-                {result.intent}
-              </div>
-              <div className="space-y-2">
-                {result.execution_plan.map((step, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-surface-container">
-                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center font-bold flex-shrink-0 mt-0.5">{step.step}</span>
-                    <div><span className="font-mono text-xs text-primary font-semibold">[{step.tool}]</span><span className="text-xs text-on-surface-variant ml-2">{step.reason}</span></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {error && <div className="p-4 rounded-xl bg-error/10 border border-error/20 text-error text-sm">{error}</div>}
         </div>
+      )}
 
-        {/* Results Panel */}
-        <div className="glass-card rounded-2xl p-6 border border-outline-variant space-y-5">
-          <h2 className="text-lg font-semibold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-error">shield_with_heart</span> Audit Results & Escalation
-          </h2>
-          {!result && !loading && (
-            <div className="flex flex-col items-center justify-center py-16 text-on-surface-variant">
-              <span className="material-symbols-outlined text-5xl mb-4 opacity-30">manage_search</span>
-              <p className="text-sm">Run a query or click a preset chip to see live agent results.</p>
-            </div>
-          )}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-16 text-primary">
-              <span className="material-symbols-outlined text-5xl mb-4 animate-spin">progress_activity</span>
-              <p className="text-sm">Agent processing your query...</p>
-            </div>
-          )}
-          {result && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-surface-container border border-outline-variant">
-                <p className="text-xs text-on-surface-variant mb-1">Summary</p>
-                <p className="text-sm text-on-surface font-medium">{result.tool_results?.summary || 'Analysis complete.'}</p>
+      {/* ── Error Display ── */}
+      {error && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium flex items-center gap-3">
+          <span className="material-symbols-outlined text-xl">error</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* ── Smooth Conversational Agent Response ── */}
+      {result && !loading && (
+        <div className="space-y-6">
+          {/* Main Narrative Card */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xl shadow-sm">
+                  ✳️
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base text-slate-900">MuleTrace Agent Assessment</h3>
+                  <p className="text-xs text-slate-500">Intent: <strong className="text-slate-700">{result.intent}</strong> · Confidence: <strong className="text-slate-700">{result.tool_results?.confidence || 'High (90%)'}</strong></p>
+                </div>
               </div>
-              {result.tool_results?.structuring_transactions?.length > 0 && (
-                <div>
-                  <p className="text-xs text-on-surface-variant uppercase tracking-widest font-semibold mb-2">Flagged Transactions ({result.tool_results.structuring_transactions.length})</p>
-                  <div className="space-y-2 max-h-56 overflow-y-auto">
-                    {result.tool_results.structuring_transactions.slice(0, 8).map((tx, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-container text-sm">
-                        <div>
-                          <span className="font-mono text-xs text-primary">{tx.source_account}</span>
-                          <span className="text-on-surface-variant mx-2">→</span>
-                          <span className="font-mono text-xs text-primary">{tx.target_account}</span>
-                          <div className="text-xs text-on-surface-variant mt-0.5">{tx.channel} · {tx.pattern}</div>
-                        </div>
-                        <span className="font-bold text-error text-sm">${tx.amount?.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {result.tool_results?.flagged_customers?.length > 0 && (
-                <div>
-                  <p className="text-xs text-on-surface-variant uppercase tracking-widest font-semibold mb-2">Threshold Breaches ({result.tool_results.flagged_customers.length})</p>
-                  <div className="space-y-2 max-h-56 overflow-y-auto">
-                    {result.tool_results.flagged_customers.map((c, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-container text-sm">
-                        <div>
-                          <span className="font-mono text-xs text-primary">{c.account_id}</span>
-                          <div className="text-xs text-on-surface-variant mt-0.5">{c.sub_10k_tx_count} txns · ${c.total_volume?.toLocaleString()}</div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-error/15 text-error border border-error/20 font-semibold">{c.risk_tier}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {result.tool_results?.single_entity && (
-                <div className="p-4 rounded-xl border border-outline-variant bg-surface-container">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <p className="font-mono text-sm text-primary font-bold">{result.tool_results.single_entity.account_id}</p>
-                      <p className="text-xs text-on-surface-variant mt-1">{result.tool_results.single_entity.explanation}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${result.tool_results.single_entity.risk_tier==='HIGH'?'bg-error/15 text-error border border-error/20':result.tool_results.single_entity.risk_tier==='MEDIUM'?'bg-warning/15 text-[#f59e0b] border border-[#f59e0b]/20':'bg-tertiary/15 text-tertiary border border-tertiary/20'}`}>
-                      {result.tool_results.single_entity.risk_tier} RISK
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 py-2 rounded-lg bg-error/10 text-error border border-error/20 text-xs font-semibold hover:bg-error/20 transition-colors">File SAR Report</button>
-                    <button className="flex-1 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold hover:bg-primary/20 transition-colors">Flag for Review</button>
-                    <button className="flex-1 py-2 rounded-lg bg-surface-container text-on-surface-variant text-xs font-semibold hover:bg-surface transition-colors">Monitor</button>
-                  </div>
-                </div>
-              )}
-              {result.tool_results?.eda_metrics && (
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(result.tool_results.eda_metrics).filter(([,v])=>typeof v !== 'object').map(([k,v])=>(
-                    <div key={k} className="p-3 rounded-xl bg-surface-container text-sm">
-                      <p className="text-xs text-on-surface-variant">{k.replace(/_/g,' ')}</p>
-                      <p className="font-bold text-primary mt-0.5">{typeof v==='number'?v.toLocaleString(undefined,{maximumFractionDigits:0}):v}</p>
+              <span className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60">
+                ⚡ {result.execution_time_ms}ms
+              </span>
+            </div>
+
+            {/* Narrative Explanation Text */}
+            <div className="text-slate-700 text-base leading-relaxed font-sans">
+              {result.tool_results?.narrative_summary || result.tool_results?.summary || 'Analysis complete.'}
+            </div>
+
+            {/* Recommended Action Box */}
+            {result.tool_results?.recommended_action && (
+              <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/60 text-emerald-900 text-sm flex items-center gap-3 font-medium">
+                <span className="material-symbols-outlined text-xl text-emerald-600">recommend</span>
+                <span><strong>Recommendation:</strong> {result.tool_results.recommended_action}</span>
+              </div>
+            )}
+
+            {/* Collapsible Reasoning & Execution Trace Accordion */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowTrace(!showTrace)}
+                className="w-full flex items-center justify-between text-xs font-semibold text-slate-500 hover:text-slate-800 py-2 cursor-pointer transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">tune</span>
+                  Agent Reasoning & Execution Steps ({result.execution_plan?.length || 0})
+                </span>
+                <span className="material-symbols-outlined text-sm">
+                  {showTrace ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+
+              {showTrace && (
+                <div className="mt-3 space-y-2 text-xs">
+                  {result.execution_logs?.map((log, i) => (
+                    <div key={i} className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 font-mono">
+                      <span className="text-emerald-600 font-bold">Step {i + 1}:</span>
+                      <span>{log}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Structuring Results Card */}
+          {result.tool_results?.structuring_transactions?.length > 0 && (
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-base text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-amber-500">warning</span>
+                  Flagged Structuring Transactions ({result.tool_results.structuring_transactions.length})
+                </h3>
+                <span className="text-xs font-medium text-slate-400">Sub-$10,000 Transfers</span>
+              </div>
+
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {result.tool_results.structuring_transactions.slice(0, 8).map((tx, i) => (
+                  <div key={i} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50/80 hover:bg-emerald-50/40 transition-colors text-sm border border-slate-100">
+                    <div>
+                      <span className="font-mono text-xs font-bold text-slate-800">{tx.source_account}</span>
+                      <span className="text-slate-400 mx-2">→</span>
+                      <span className="font-mono text-xs font-bold text-slate-800">{tx.target_account}</span>
+                      <div className="text-xs text-slate-500 mt-0.5">{tx.channel || tx.channel_type} · {tx.note || 'Sub-threshold deposit'}</div>
+                    </div>
+                    <span className="font-bold font-mono text-amber-600 text-base">${tx.amount?.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Threshold Breaches Card */}
+          {result.tool_results?.flagged_customers?.length > 0 && (
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
+              <h3 className="font-semibold text-base text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-purple-600">running_with_errors</span>
+                Threshold Evasion Accounts ({result.tool_results.flagged_customers.length})
+              </h3>
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {result.tool_results.flagged_customers.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50/80 text-sm border border-slate-100">
+                    <div>
+                      <span className="font-mono text-xs font-bold text-slate-800">{c.account_id}</span>
+                      <div className="text-xs text-slate-500 mt-0.5">{c.sub_10k_tx_count} sub-threshold txns · ${c.total_volume?.toLocaleString()} total</div>
+                    </div>
+                    <span className="text-xs px-3 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 font-bold uppercase">
+                      {c.risk_tier} RISK
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Single Entity Audit Card */}
+          {result.tool_results?.single_entity && (
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-5">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-emerald-600">person</span>
+                    Single Entity Audit: {result.tool_results.single_entity.account_id}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    {result.tool_results.single_entity.explanation}
+                  </p>
+                </div>
+                <span className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase ${
+                  result.tool_results.single_entity.risk_tier === 'HIGH'
+                    ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                }`}>
+                  {result.tool_results.single_entity.risk_tier} RISK
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button className="flex-1 py-3 rounded-2xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 transition-colors shadow-sm cursor-pointer">
+                  🚨 File SAR Report
+                </button>
+                <button className="flex-1 py-3 rounded-2xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-sm cursor-pointer">
+                  🔍 Escalate Case
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Profiling Overview Card */}
+          {result.tool_results?.eda_metrics && (
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
+              <h3 className="font-semibold text-base text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-600">analytics</span>
+                Dataset Profiling Overview
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {Object.entries(result.tool_results.eda_metrics).filter(([, v]) => typeof v !== 'object').map(([k, v]) => (
+                  <div key={k} className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100">
+                    <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{k.replace(/_/g, ' ')}</p>
+                    <p className="font-bold text-slate-900 text-base mt-1">
+                      {typeof v === 'number' ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : v}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -588,6 +761,10 @@ function App() {
   const [nlpText, setNlpText] = useState('urgent advance fee split payment avoid tax')
   const [nlpResult, setNlpResult] = useState(null)
 
+  // ── Pipeline progress state ──────────────────────────────────────
+  const [pipelineJob, setPipelineJob] = useState(null)  // null | job object
+  const pipelinePollRef = useRef(null)
+
 
   useEffect(() => {
     if (logRef.current) {
@@ -678,17 +855,67 @@ function App() {
   }
 
   const runFullPipeline = async () => {
+    // Start the background pipeline job
+    addLog('🚀 Starting full pipeline (background)...', 'info')
+    setPipelineJob(null)
     setLoading(true)
-    addLog('🚀 Running full pipeline...', 'info')
     try {
-      const res = await apiCall('/api/pipeline/run')
-      addLog(`✅ ${res.message}`, 'success')
-      setTrainingResults(res.details?.training)
-      setRiskDist(res.details?.risk?.distribution)
-      setPipelineState({ generated: true, ingested: true, trained: true, analyzed: true })
-      fetchAccounts()
-      fetchClusters()
-    } catch { /* logged */ } finally { setLoading(false) }
+      await apiCall('/api/pipeline/run')
+      addLog('⏳ Pipeline running in background — progress updates below...', 'info')
+    } catch {
+      setLoading(false)
+      return
+    }
+
+    // Poll /api/pipeline/status every 2 seconds
+    const poll = async () => {
+      try {
+        const status = await apiCall('/api/pipeline/status', 'GET')
+        setPipelineJob(status)
+
+        if (status.status === 'running') {
+          addLog(`🔄 [${status.progress_pct}%] ${status.current_step}...`, 'info')
+          pipelinePollRef.current = setTimeout(poll, 2000)
+        } else if (status.status === 'complete') {
+          const r = status.last_result || {}
+          addLog(`✅ Pipeline complete in ${r.total_duration_s}s`, 'success')
+          addLog(`   Test AUC: ${r.test_auc?.toFixed(4)} | Flagged: ${r.flagged} | Clusters: ${r.clusters}`, 'success')
+          if (r.overfitting_warning) addLog('⚠️  Val-Test AUC gap > 0.05 detected (check for overfitting)', 'warning')
+          if (r.stopped_early) addLog(`⏹️  Early stopping triggered at epoch ${r.epochs_trained}`, 'info')
+          setTrainingResults({
+            test_auc: r.test_auc,
+            test_average_precision: r.test_average_precision,
+            best_val_auc: r.best_val_auc,
+            overfitting_warning: r.overfitting_warning,
+            stopped_early: r.stopped_early,
+            epochs_trained: r.epochs_trained,
+            steps: status.steps_done,
+          })
+          setPipelineState({ generated: true, ingested: true, trained: true, analyzed: true })
+          setLoading(false)
+          fetchAccounts()
+          fetchClusters()
+        } else if (status.status === 'failed' || status.status === 'cancelled') {
+          addLog(`❌ Pipeline ${status.status}: ${status.error}`, 'error')
+          setLoading(false)
+        }
+      } catch (e) {
+        addLog(`❌ Status poll error: ${e.message}`, 'error')
+        setLoading(false)
+      }
+    }
+
+    // Start polling after a brief delay
+    pipelinePollRef.current = setTimeout(poll, 1500)
+  }
+
+  const cancelPipeline = async () => {
+    if (pipelinePollRef.current) clearTimeout(pipelinePollRef.current)
+    try {
+      await apiCall('/api/pipeline/cancel', 'POST')
+      addLog('⏹️  Pipeline cancellation requested', 'warning')
+      setLoading(false)
+    } catch { /* */ }
   }
 
   const fetchAccounts = async () => {
@@ -950,16 +1177,95 @@ function App() {
               </header>
 
               {/* Global Action Bar */}
-              <div className="flex gap-4 mb-8">
+              <div className="flex gap-4 mb-6">
                 <button
                   onClick={runFullPipeline}
                   disabled={loading}
                   className="bg-primary text-on-primary hover:bg-primary-fixed hover:text-on-primary-fixed font-bold py-4 px-8 rounded-2xl shadow-lg transition-all flex items-center gap-3 text-lg border border-transparent disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading && <span className="material-symbols-outlined animate-spin">refresh</span>}
-                  {loading ? 'Running...' : 'Run Full Pipeline'}
+                  {loading ? 'Pipeline Running...' : '🚀 Run Full Pipeline'}
                 </button>
+                {loading && (
+                  <button
+                    onClick={cancelPipeline}
+                    className="bg-error/10 text-error hover:bg-error/20 font-semibold py-4 px-6 rounded-2xl border border-error/30 transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    ⏹ Cancel
+                  </button>
+                )}
               </div>
+
+              {/* Live Pipeline Progress */}
+              {(loading || (pipelineJob && pipelineJob.status === 'complete')) && (
+                <div className="glass-card rounded-2xl p-5 mb-6 border border-outline-variant">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">
+                      {pipelineJob?.status === 'complete' ? '✅ Pipeline Complete' : '⚡ Pipeline Progress'}
+                    </span>
+                    <span className="text-sm font-mono text-primary font-bold">
+                      {pipelineJob?.progress_pct ?? 0}%
+                    </span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div style={{ width: '100%', height: 8, borderRadius: 999, background: 'var(--surface-elevated)', marginBottom: 12 }}>
+                    <div style={{
+                      width: `${pipelineJob?.progress_pct ?? 0}%`,
+                      height: '100%',
+                      borderRadius: 999,
+                      background: pipelineJob?.status === 'complete'
+                        ? 'linear-gradient(90deg, #10b981, #06b6d4)'
+                        : 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+                      transition: 'width 0.4s ease',
+                    }} />
+                  </div>
+                  {/* Current step */}
+                  {pipelineJob?.current_step && (
+                    <div className="text-sm text-on-surface-variant mb-3" style={{ fontStyle: pipelineJob.status === 'running' ? 'italic' : 'normal' }}>
+                      {pipelineJob.status === 'running' ? `🔄 ${pipelineJob.current_step}...` : pipelineJob.current_step}
+                    </div>
+                  )}
+                  {/* Step timings */}
+                  {pipelineJob?.steps_done?.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {pipelineJob.steps_done.map((s, i) => (
+                        <span key={i} style={{
+                          background: 'var(--bg-tinted)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 8,
+                          padding: '3px 10px',
+                          fontSize: 12,
+                          color: 'var(--text-secondary)',
+                        }}>
+                          ✅ {s.name} — <strong>{s.duration_s}s</strong>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Final results */}
+                  {pipelineJob?.status === 'complete' && pipelineJob?.last_result && (
+                    <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
+                      {[
+                        { label: 'Test AUC', value: pipelineJob.last_result.test_auc?.toFixed(4), color: '#6366f1' },
+                        { label: 'Avg Precision', value: pipelineJob.last_result.test_average_precision?.toFixed(4), color: '#06b6d4' },
+                        { label: 'Flagged', value: pipelineJob.last_result.flagged, color: '#ef4444' },
+                        { label: 'Clusters', value: pipelineJob.last_result.clusters, color: '#f97316' },
+                        { label: 'Total Time', value: `${pipelineJob.last_result.total_duration_s}s`, color: '#10b981' },
+                      ].map(m => (
+                        <div key={m.label} className="stat-card">
+                          <div className="stat-value" style={{ color: m.color, fontSize: 18 }}>{m.value ?? '—'}</div>
+                          <div className="stat-label">{m.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {pipelineJob?.last_result?.overfitting_warning && (
+                    <div style={{ marginTop: 10, padding: '8px 12px', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, fontSize: 12, color: '#92400e' }}>
+                      ⚠️ <strong>Overfitting signal detected:</strong> Val-Test AUC gap &gt; 0.05. Consider adding more data diversity.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Pipeline Stages (Bento Grid) */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

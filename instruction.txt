@@ -1,0 +1,46 @@
+================================================================================
+MULETRACE — AUTONOMOUS AGENTIC AML & CROSS-CHANNEL FRAUD INTELLIGENCE SYSTEM
+================================================================================
+
+PROJECT OVERVIEW:
+MuleTrace is a state-of-the-art AI-Powered Suspicious Activity & Cross-Channel Mule Detection Agent built for Hackathon Problem Statement 1. It combines dynamic agentic orchestration (NLP intent parsing, dynamic execution plan construction, selective tool invocation) with PyTorch Geometric Graph Neural Networks (GraphSAGE + GAT), NetworkX Unified Entity Graphs, Gradient×Input XAI feature attribution, and FIU-IND compliant SAR report generation.
+
+PROBLEM STATEMENT ALIGNMENT:
+- Hackathon Topic: Problem Statement 1 — AI-Powered Suspicious Activity Detection.
+- Target AML Patterns: Structuring (<$10,000 evasion), Smurfing, Rapid Cash-Out (UPI to ATM velocity), Shared Device/IP Mule Rings, and Layering.
+- Core Agentic Requirement: Accepts natural language analyst queries, extracts intent/filters/entities, and dynamically constructs execution plans calling ONLY necessary tools (EDA Tool, Feature Eng Tool, Anomaly Tool, Risk Tool, XAI Explanation Tool).
+
+DATASET & SOURCES:
+- Schema Derived From: Kaggle / IBM AML Synthetic Financial Datasets & PaySim Mobile Financial Crime Benchmark.
+- Multi-Channel Telemetry: Synthesizes multi-channel transaction streams (UPI, ATM, Web Banking, Mobile App) with device fingerprints, IP subnets, and geo-velocity.
+- Rules Compliance: Zero references to restricted bank entities. All schemas and assumptions documented in README.md.
+
+SYSTEM ARCHITECTURE:
+1. Backend: FastAPI (Python 3.10+)
+   - backend/agent/planner.py        : NLP intent parser & query plan builder
+   - backend/agent/tools.py          : Selective EDA, Feature Eng, Anomaly, Risk, and XAI tools
+   - backend/agent/orchestrator.py   : Master agent execution coordinator
+   - backend/data/generator.py       : Multi-pattern AML synthetic generator
+   - backend/graph/builder.py        : Unified Entity Graph builder (NetworkX / Neo4j)
+   - backend/gnn/                    : PyTorch Geometric GraphSAGE + GAT model
+   - backend/risk/                   : Pattern detection, sanctions, and risk engine
+   - backend/xai/                    : Feature attributions & FIU-IND SAR report generator
+
+2. Frontend: React 19 + Vite + Tailwind/Vanilla Cyberpunk Dark CSS
+   - frontend/src/components/AgentWorkbench.jsx : Analyst Chat & Live Agent Execution Visualizer
+   - frontend/src/components/NetworkGraph.jsx    : Force-directed entity graph inspector
+   - frontend/src/components/AccountsView.jsx    : Account risk matrix & filters
+   - frontend/src/components/SarReportView.jsx   : FIU-IND SAR Audit Report Viewer
+
+LOCAL RUN COMMANDS:
+- Backend:
+  pip install -r backend/requirements.txt
+  uvicorn backend.main:app --reload --port 8000
+- Frontend:
+  cd frontend
+  npm install
+  npm run dev (Runs on http://localhost:5173)
+
+SUMMARY PROMPT FOR AI SESSIONS:
+"You are pair-programming on MuleTrace — an autonomous agentic AML and cross-channel mule detection system built with FastAPI, PyTorch Geometric, NetworkX, and React. Maintain modular code structure, zero external deployment assumptions, clean git commits, and clear XAI explainability for compliance analysts."
+================================================================================

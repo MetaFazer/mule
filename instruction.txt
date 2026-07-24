@@ -1,46 +1,103 @@
 ================================================================================
 MULETRACE — AUTONOMOUS AGENTIC AML & CROSS-CHANNEL FRAUD INTELLIGENCE SYSTEM
 ================================================================================
+Master Context, Architecture Blueprint, and Sequential Execution Log
+Target Folder: /Users/amit/Desktop/mule-trace
+Remote GitHub Repo: https://github.com/ac265640/mule-trace.git
 
-PROJECT OVERVIEW:
-MuleTrace is a state-of-the-art AI-Powered Suspicious Activity & Cross-Channel Mule Detection Agent built for Hackathon Problem Statement 1. It combines dynamic agentic orchestration (NLP intent parsing, dynamic execution plan construction, selective tool invocation) with PyTorch Geometric Graph Neural Networks (GraphSAGE + GAT), NetworkX Unified Entity Graphs, Gradient×Input XAI feature attribution, and FIU-IND compliant SAR report generation.
+--------------------------------------------------------------------------------
+SECTION 1: BASELINE CONTEXT & BACKGROUND (ORIGINAL CHAINVIGIL SYSTEM)
+--------------------------------------------------------------------------------
+ChainVigil was an initial proof-of-concept for cross-channel money mule detection 
+using NetworkX entity graphs and PyTorch Geometric GNN models. It executed static, 
+fixed sequential API pipelines (/api/pipeline/run).
 
-PROBLEM STATEMENT ALIGNMENT:
-- Hackathon Topic: Problem Statement 1 — AI-Powered Suspicious Activity Detection.
-- Target AML Patterns: Structuring (<$10,000 evasion), Smurfing, Rapid Cash-Out (UPI to ATM velocity), Shared Device/IP Mule Rings, and Layering.
-- Core Agentic Requirement: Accepts natural language analyst queries, extracts intent/filters/entities, and dynamically constructs execution plans calling ONLY necessary tools (EDA Tool, Feature Eng Tool, Anomaly Tool, Risk Tool, XAI Explanation Tool).
+For this hackathon, we are isolating ChainVigil (/Users/amit/Desktop/chainvigil) 
+and building a completely fresh, upgraded, and standalone project named MULETRACE 
+in /Users/amit/Desktop/mule-trace.
 
-DATASET & SOURCES:
-- Schema Derived From: Kaggle / IBM AML Synthetic Financial Datasets & PaySim Mobile Financial Crime Benchmark.
-- Multi-Channel Telemetry: Synthesizes multi-channel transaction streams (UPI, ATM, Web Banking, Mobile App) with device fingerprints, IP subnets, and geo-velocity.
-- Rules Compliance: Zero references to restricted bank entities. All schemas and assumptions documented in README.md.
+--------------------------------------------------------------------------------
+SECTION 2: HACKATHON PROBLEM STATEMENT & OBJECTIVES
+--------------------------------------------------------------------------------
+- Hackathon Track: Problem Statement 1 — AI-Powered Suspicious Activity Detection
+- Business Goal: Build an intelligent, autonomous agent that learns from transaction 
+  patterns, detects money laundering (Structuring, Smurfing, Rapid Cash-Out, Layering), 
+  and provides explainable risk assessments with actionable escalation recommendations.
+- Key Agentic Requirement:
+  The agent MUST NOT follow a fixed sequential pipeline. It must parse natural language 
+  queries, extract intent/filters/entities, and dynamically construct execution plans 
+  invoking ONLY the tools required for that specific query.
+- Strict Constraints:
+  1. No restricted organization references (SG, Societe Generale, SocGen, SGGSC).
+  2. Generic banking AML domain naming throughout.
+  3. Public GitHub repo with full commit history created during hackathon window.
+  4. Runnable local setup (FastAPI + React Vite), no mandatory cloud deployment.
 
-SYSTEM ARCHITECTURE:
-1. Backend: FastAPI (Python 3.10+)
-   - backend/agent/planner.py        : NLP intent parser & query plan builder
-   - backend/agent/tools.py          : Selective EDA, Feature Eng, Anomaly, Risk, and XAI tools
-   - backend/agent/orchestrator.py   : Master agent execution coordinator
-   - backend/data/generator.py       : Multi-pattern AML synthetic generator
-   - backend/graph/builder.py        : Unified Entity Graph builder (NetworkX / Neo4j)
-   - backend/gnn/                    : PyTorch Geometric GraphSAGE + GAT model
-   - backend/risk/                   : Pattern detection, sanctions, and risk engine
-   - backend/xai/                    : Feature attributions & FIU-IND SAR report generator
+--------------------------------------------------------------------------------
+SECTION 3: MULETRACE SYSTEM ARCHITECTURE & COMPONENTS
+--------------------------------------------------------------------------------
+Project Root: /Users/amit/Desktop/mule-trace
 
-2. Frontend: React 19 + Vite + Tailwind/Vanilla Cyberpunk Dark CSS
-   - frontend/src/components/AgentWorkbench.jsx : Analyst Chat & Live Agent Execution Visualizer
-   - frontend/src/components/NetworkGraph.jsx    : Force-directed entity graph inspector
-   - frontend/src/components/AccountsView.jsx    : Account risk matrix & filters
-   - frontend/src/components/SarReportView.jsx   : FIU-IND SAR Audit Report Viewer
+1. BACKEND ARCHITECTURE (FastAPI, Python 3.10+):
+   - backend/config.py: Global thresholds (Structuring $10k line, risk tiers).
+   - backend/requirements.txt: Dependencies (FastAPI, PyTorch, PyTorch Geometric, NetworkX).
+   - backend/data/generator.py: Multi-pattern synthetic dataset generator (Structuring, Rapid Cashout, Mule Rings, Devices, IPs).
+   - backend/graph/builder.py: NetworkX Unified Entity Graph builder (Accounts, Devices, IPs, Transfers).
+   - backend/gnn/features.py: 10-feature extraction matrix per account node.
+   - backend/gnn/dataset.py: NetworkX to PyTorch Geometric Data converter with train/val masks.
+   - backend/gnn/model.py: Hybrid GraphSAGE + GAT neural network classifier.
+   - backend/gnn/train.py: Weighted BCE training pipeline with validation AUC tracking.
+   - backend/gnn/predict.py: Model inference & risk scoring engine.
+   - backend/risk/patterns.py: Structuring ($9,000–$9,950 smurfing), Rapid Cash-Out, Shared Device/IP detectors.
+   - backend/risk/engine.py: Master Risk Intelligence Engine aggregating GNN scores & pattern signals.
+   - backend/risk/sanctions.py: Sanctions screening & high-risk jurisdiction compliance checker.
+   - backend/xai/explainer.py: Gradient×Input feature attribution explainer.
+   - backend/xai/report.py: FIU-IND compliant Suspicious Activity Report (SAR) payload generator.
+   - backend/agent/planner.py: NLP intent parser & dynamic execution plan builder.
+   - backend/agent/tools.py: Modular tool registry (EDA, Structuring, Aggregation Rules, Entity Lookup).
+   - backend/agent/orchestrator.py: Master Agent Orchestrator coordinating dynamic execution plans.
+   - backend/main.py: FastAPI entry point with CORS, SPA static mounting, and API routes.
 
-LOCAL RUN COMMANDS:
-- Backend:
-  pip install -r backend/requirements.txt
-  uvicorn backend.main:app --reload --port 8000
-- Frontend:
-  cd frontend
-  npm install
-  npm run dev (Runs on http://localhost:5173)
+2. FRONTEND ARCHITECTURE (React 19 + Vite + Cyberpunk Glassmorphism CSS):
+   - frontend/package.json & vite.config.js: Node build setup.
+   - frontend/src/index.css: Design system, dark mode tokens, neon status badges.
+   - frontend/src/App.jsx: Main dashboard layout & tab navigator.
+   - frontend/src/components/AgentWorkbench.jsx: Analyst Chat UI + Live Agent Execution Visualizer.
+   - frontend/src/components/NetworkGraph.jsx: Interactive 2D force-directed graph inspector.
+   - frontend/src/components/AccountsView.jsx: Account risk matrix & filters.
+   - frontend/src/components/SarReportView.jsx: FIU-IND SAR Audit Report Viewer.
 
-SUMMARY PROMPT FOR AI SESSIONS:
-"You are pair-programming on MuleTrace — an autonomous agentic AML and cross-channel mule detection system built with FastAPI, PyTorch Geometric, NetworkX, and React. Maintain modular code structure, zero external deployment assumptions, clean git commits, and clear XAI explainability for compliance analysts."
+--------------------------------------------------------------------------------
+SECTION 4: 15-COMMIT SEQUENTIAL EXECUTION TRACKER
+--------------------------------------------------------------------------------
+[Completed] Commit 1 : feat: initialize MuleTrace repository structure and instruction.txt context
+[Completed] Commit 2 : feat(backend): add configuration and multi-pattern synthetic AML data generator
+[Completed] Commit 3 : feat(backend): add NetworkX unified entity graph builder
+[Completed] Commit 4 : feat(backend): add PyTorch Geometric GraphSAGE+GAT model and trainer
+[Completed] Commit 5 : feat(backend): add pattern detector, risk engine, and sanctions screener
+[Completed] Commit 6 : feat(backend): add sanctions screening and behavioral fingerprinting
+[Completed] Commit 7 : feat(backend): add GradientxInput XAI explainer & FIU-IND SAR report generator
+[Completed] Commit 8 : feat(agent): implement autonomous NLP intent parser & execution plan builder
+[Completed] Commit 9 : feat(agent): add modular tool registry (EDA, Features, Anomaly, Risk, XAI, Escalation)
+[Pending]   Commit 10: feat(agent): implement master AgentOrchestrator and /api/agent/query API
+[Pending]   Commit 11: feat(frontend): initialize React 19 + Vite app and dark glassmorphism design system
+[Pending]   Commit 12: feat(frontend): implement Interactive Agent Workbench with NL chat & execution trace
+[Pending]   Commit 13: feat(frontend): implement 2D force-directed entity graph and cluster inspector
+[Pending]   Commit 14: feat(frontend): implement accounts risk matrix & FIU-IND SAR report viewer
+[Pending]   Commit 15: docs: add comprehensive README with dataset schema, FATF citations, and 2-slide pitch deck
+
+--------------------------------------------------------------------------------
+SECTION 5: INSTRUCTIONS FOR CONTINUING DEVELOPMENT
+--------------------------------------------------------------------------------
+To continue from step 10:
+1. Ensure working directory is /Users/amit/Desktop/mule-trace.
+2. Complete backend/agent/orchestrator.py and update backend/main.py with /api/agent/query endpoint.
+3. Commit and push Commit 10 to https://github.com/ac265640/mule-trace.git.
+4. Scaffold frontend/ directory using Vite React template and install dependencies.
+5. Create frontend components (AgentWorkbench.jsx, NetworkGraph.jsx, AccountsView.jsx, SarReportView.jsx).
+6. Commit Commits 11, 12, 13, 14 sequentially and push to GitHub.
+7. Generate master README.md and PITCH_DECK_AND_DEMO.md, commit as Commit 15.
+8. Verify local execution:
+   - Backend: uvicorn backend.main:app --reload --port 8000
+   - Frontend: cd frontend && npm run dev (http://localhost:5173)
 ================================================================================

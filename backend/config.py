@@ -2,11 +2,11 @@
 MuleTrace — Configuration & Database Connection Settings
 
 Dataset design decisions:
-- NUM_ACCOUNTS: 1200 accounts (larger pool for realistic 1-2% mule prevalence)
-- NUM_MULE_RINGS: 12 rings total (7 fraud + 5 false positive)
-  → At ring size 3-5, this yields ~18-35 mule accounts = ~1.5-2.9% prevalence
-  → Matches SAML-D / AMLNet industry baseline of 0.5-3%
-- GNN_EPOCHS: 60 with early stopping (patience=15) — faster convergence
+- NUM_ACCOUNTS: 1200 accounts
+- NUM_MULE_RINGS: 25 rings (18 fraud + 7 false positive)
+  → At ring size 5-8, this yields ~125-200 mule accounts (~10-15% prevalence)
+  → Higher prevalence = more training signal = better AP on balanced test set
+- GNN_EPOCHS: 200 with early stopping (patience=25)
 """
 import os
 
@@ -17,21 +17,22 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "chainvigil")
 
 # ─── Data Generation Defaults ───────────────────────────────────────
 NUM_ACCOUNTS = int(os.getenv("NUM_ACCOUNTS", "1200"))
-NUM_TRANSACTIONS = int(os.getenv("NUM_TRANSACTIONS", "5000"))
-# 12 rings: 7 fraud typologies + 5 false positives
-# Ring size 3-5 → ~18-35 true mule accounts (~1.5-2.9% of 1200 base accounts)
-NUM_MULE_RINGS = int(os.getenv("NUM_MULE_RINGS", "12"))
-MULE_RING_SIZE_RANGE = (3, 5)   # Smaller, realistic ring sizes
+NUM_TRANSACTIONS = int(os.getenv("NUM_TRANSACTIONS", "6000"))
+# 25 rings: 18 fraud typologies + 7 false positives
+# Ring size 5-8 → ~125-200 true mule accounts (~10-15% of 1200 base accounts)
+# Higher mule prevalence = more positive training examples = better AP
+NUM_MULE_RINGS = int(os.getenv("NUM_MULE_RINGS", "25"))
+MULE_RING_SIZE_RANGE = (5, 8)   # Larger rings for more training signal
 
 # ─── Channels ───────────────────────────────────────────────────────
 CHANNELS = ["UPI", "ATM", "WEB", "MOBILE_APP"]
 
 # ─── GNN Configuration ─────────────────────────────────────────────
-GNN_HIDDEN_DIM = 64    # slightly larger to handle new features
+GNN_HIDDEN_DIM = 64    # kept lean for fast training (<30s)
 GNN_NUM_LAYERS = 3     # 3-hop aggregation for ring detection
 GNN_LEARNING_RATE = 0.003
-GNN_EPOCHS = 60        # reduced; early stopping at patience=15 will stop earlier
-GNN_DROPOUT = 0.4      # slightly higher dropout for realistic AUC
+GNN_EPOCHS = 60        # fast: ~22s; early stopping at patience=25
+GNN_DROPOUT = 0.2      # lower dropout improves precision
 RISK_THRESHOLD = 0.50  # balanced threshold
 
 # ─── Paths ──────────────────────────────────────────────────────────

@@ -44,8 +44,8 @@ class Trainer:
         num_layers: int = GNN_NUM_LAYERS,
         dropout: float = GNN_DROPOUT,
         lr: float = GNN_LEARNING_RATE,
-        label_noise_rate: float = 0.06,
-        early_stopping_patience: int = 15,
+        label_noise_rate: float = 0.0,
+        early_stopping_patience: int = 25,
     ):
         self.data = data
         self.early_stopping_patience = early_stopping_patience

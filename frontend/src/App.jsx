@@ -1259,11 +1259,6 @@ function App() {
                       ))}
                     </div>
                   )}
-                  {pipelineJob?.last_result?.overfitting_warning && (
-                    <div style={{ marginTop: 10, padding: '8px 12px', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, fontSize: 12, color: '#92400e' }}>
-                      ⚠️ <strong>Overfitting signal detected:</strong> Val-Test AUC gap &gt; 0.05. Consider adding more data diversity.
-                    </div>
-                  )}
                 </div>
               )}
 

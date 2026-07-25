@@ -130,7 +130,8 @@ class AgentToolRegistry:
 
         return {
             "account_id": account_id,
-            "risk_score": prob,
+            "mule_probability": prob,   # key matches orchestrator + predict_scores schema
+            "risk_score": prob,         # keep for any other callers
             "risk_tier": tier,
             "recommended_action": action,
             "explanation": f"Single entity audit for {account_id}: Risk tier classified as {tier}."

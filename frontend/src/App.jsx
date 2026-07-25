@@ -7,6 +7,28 @@ import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
+// ─── Shared risk color helpers (module-level so all components can use them) ───
+const getRiskColor = (score) => {
+  if (score >= 0.85) return 'var(--color-danger)'
+  if (score >= 0.6) return 'var(--color-warning)'
+  if (score >= 0.4) return 'var(--accent-blue)'
+  return 'var(--accent-green)'
+}
+
+const getRiskColorByTier = (tier) => {
+  const t = (tier || '').toUpperCase()
+  if (t === 'CRITICAL' || t === 'HIGH') return 'var(--color-danger)'
+  if (t === 'MEDIUM') return 'var(--color-warning)'
+  if (t === 'LOW') return 'var(--accent-blue)'
+  return 'var(--accent-green)'
+}
+
+const getRiskLevel = (score) => {
+  if (score >= 0.85) return 'high'
+  if (score >= 0.6) return 'medium'
+  return 'low'
+}
+
 // ─── 🤖 Agent Workbench Panel (Smooth Claude Light Theme) ─────────────────────
 function AgentWorkbenchPanel() {
   const [query, setQuery] = useState('')
@@ -206,22 +228,24 @@ function AgentWorkbenchPanel() {
       )}
 
       {/* ── Smooth Conversational Agent Response ── */}
-      {result && !loading && (
-        <div className="space-y-6">
-          {/* Main Narrative Card */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+      {result && (
+        <div className="space-y-5 animate-fade-in">
+          {/* Main Conversational Box */}
+          <div className="bg-white border border-slate-200/90 shadow-sm rounded-3xl p-6 sm:p-7 space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xl shadow-sm">
-                  ✳️
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-xl">smart_toy</span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base text-slate-900">MuleTrace Agent Assessment</h3>
+                  <h2 className="font-bold text-slate-900 text-base">MuleTrace AI Agent</h2>
                   <p className="text-xs text-slate-500">Intent: <strong className="text-slate-700">{result.intent}</strong> · Confidence: <strong className="text-slate-700">{result.tool_results?.confidence || 'High (90%)'}</strong></p>
                 </div>
               </div>
-              <span className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60">
-                ⚡ {result.execution_time_ms}ms
+              <span className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs">bolt</span>
+                <span>{result.execution_time_ms}ms</span>
               </span>
             </div>
 
@@ -329,21 +353,38 @@ function AgentWorkbenchPanel() {
                     {result.tool_results.single_entity.explanation}
                   </p>
                 </div>
-                <span className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase ${
-                  result.tool_results.single_entity.risk_tier === 'HIGH'
+                <span className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase ${result.tool_results.single_entity.risk_tier === 'HIGH'
                     ? 'bg-rose-100 text-rose-700 border border-rose-200'
                     : 'bg-amber-100 text-amber-800 border border-amber-200'
-                }`}>
+                  }`}>
                   {result.tool_results.single_entity.risk_tier} RISK
                 </span>
               </div>
 
+              {/* Functional Action Buttons */}
               <div className="flex flex-wrap gap-3 pt-2">
-                <button className="flex-1 py-3 rounded-2xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 transition-colors shadow-sm cursor-pointer">
-                  🚨 File SAR Report
+                <button
+                  onClick={() => {
+                    const accId = result.tool_results.single_entity.account_id
+                    addLog(`Initializing FinCEN SAR Filing for ${accId}...`, 'info')
+                    setActiveTab('sanctions')
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">description</span>
+                  <span>File SAR Report</span>
                 </button>
-                <button className="flex-1 py-3 rounded-2xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-sm cursor-pointer">
-                  🔍 Escalate Case
+                <button
+                  onClick={() => {
+                    const accId = result.tool_results.single_entity.account_id
+                    addLog(`Escalated ${accId} to Senior AML Officer for full XAI attribution.`, 'warning')
+                    fetchExplanation(accId)
+                    setActiveTab('xai')
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">gavel</span>
+                  <span>Escalate Case</span>
                 </button>
               </div>
             </div>
@@ -441,14 +482,14 @@ function IntelligenceTab({
           onClick={fetchIntelligence}
           disabled={intelLoading || !intelAccount.trim()}
         >
-          {intelLoading ? <span className="spinner" /> : '🤖'} Analyze
+          {intelLoading ? <span className="spinner" /> : null} Analyze
         </button>
       </div>
 
       {/* ── Quick-fill badges from cluster members ── */}
       {quickIds.length > 0 && (
         <div style={{ marginBottom: 20, padding: '10px 14px', background: 'var(--bg-tinted)', borderRadius: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-          💡 Click an account to auto-fill:{' '}
+          Click an account to auto-fill:{' '}
           {quickIds.map(id => (
             <button
               key={id}
@@ -467,7 +508,7 @@ function IntelligenceTab({
       )}
       {quickIds.length === 0 && (
         <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--bg-tinted)', borderRadius: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-          ⚠️ No cluster data yet — run the pipeline first, then come back here.
+          No cluster data yet — run the pipeline first, then come back here.
         </div>
       )}
 
@@ -478,8 +519,8 @@ function IntelligenceTab({
           {/* Score banner */}
           <div style={{
             padding: '20px 24px', borderRadius: 10,
-            background: `${getRiskColor(intelResult.root_cause?.risk_tier)}18`,
-            border: `1px solid ${getRiskColor(intelResult.root_cause?.risk_tier)}`,
+            background: `${getRiskColorByTier(intelResult.root_cause?.risk_tier)}18`,
+            border: `1px solid ${getRiskColorByTier(intelResult.root_cause?.risk_tier)}`,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12
           }}>
             <div>
@@ -488,17 +529,17 @@ function IntelligenceTab({
                 {intelResult.account_id}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                GNN Score: <strong>{((intelResult.gnn_score || 0) * 100).toFixed(1)}%</strong>
+                GNN Risk Score: <strong style={{ color: getRiskColor(intelResult.gnn_score || 0) }}>{((intelResult.gnn_score || 0) * 100).toFixed(1)}%</strong>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Final Risk Score</div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: getRiskColor(intelResult.root_cause?.risk_tier) }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: getRiskColorByTier(intelResult.root_cause?.risk_tier) }}>
                 {(((intelResult.root_cause?.final_risk_score) || 0) * 100).toFixed(1)}%
               </div>
               <span style={{
                 padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                background: getRiskColor(intelResult.root_cause?.risk_tier), color: 'white'
+                background: getRiskColorByTier(intelResult.root_cause?.risk_tier), color: 'white'
               }}>{intelResult.root_cause?.risk_tier || '—'}</span>
             </div>
           </div>
@@ -507,48 +548,82 @@ function IntelligenceTab({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
             {/* Temporal */}
             <div className="stat-card" style={{ borderTop: '3px solid #6366f1' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>⏱ TEMPORAL</div>
-              <div className="stat-value" style={{ color: '#6366f1', fontSize: 26 }}>
-                {(((intelResult.temporal?.temporal_risk_score) || 0) * 100).toFixed(0)}%
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: intelResult.temporal?.burst_detected ? '#ef4444' : '#22c55e' }}>
-                {intelResult.temporal?.burst_detected ? '🔴 Burst Detected' : '🟢 No Burst'}
-              </div>
-              <div style={{ fontSize: 12, marginTop: 4, color: intelResult.temporal?.rapid_relay_detected ? '#ef4444' : '#22c55e' }}>
-                {intelResult.temporal?.rapid_relay_detected ? '🔴 Rapid Relay' : '🟢 No Relay'}
-              </div>
-              {(intelResult.temporal?.temporal_signals || []).map((s, i) => (
-                <div key={i} style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>↳ {s}</div>
-              ))}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>TEMPORAL</div>
+              {(() => {
+                const ts = intelResult.temporal?.temporal_risk_score || 0
+                const txCount = intelResult.temporal?.outgoing_tx_count || 0
+                const hasAnyData = txCount > 0 || (intelResult.temporal?.incoming_tx_count || 0) > 0
+                const hasSignals = (intelResult.temporal?.temporal_signals || []).length > 0 || ts > 0
+                if (!hasAnyData) return (
+                  <>
+                    <div className="stat-value" style={{ color: 'var(--text-muted)', fontSize: 22 }}>N/A</div>
+                    <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>No transaction data found for this account.</div>
+                  </>
+                )
+                return (
+                  <>
+                    <div className="stat-value" style={{ color: hasSignals ? '#6366f1' : '#22c55e', fontSize: 26 }}>
+                      {hasSignals ? `${(ts * 100).toFixed(0)}%` : 'Clean'}
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+                      {txCount} outgoing · {intelResult.temporal?.incoming_tx_count || 0} incoming tx
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 12, color: intelResult.temporal?.burst_detected ? '#ef4444' : '#22c55e' }}>
+                      {intelResult.temporal?.burst_detected ? 'Burst Detected' : 'No Burst'}
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 4, color: intelResult.temporal?.rapid_relay_detected ? '#ef4444' : '#22c55e' }}>
+                      {intelResult.temporal?.rapid_relay_detected ? 'Rapid Relay' : 'No Relay'}
+                    </div>
+                    {(intelResult.temporal?.temporal_signals || []).map((s, i) => (
+                      <div key={i} style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>↳ {s}</div>
+                    ))}
+                  </>
+                )
+              })()}
             </div>
 
             {/* Behavioral */}
             <div className="stat-card" style={{ borderTop: '3px solid #10b981' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>🧬 BEHAVIORAL</div>
-              <div className="stat-value" style={{ color: '#10b981', fontSize: 26 }}>
-                {(((intelResult.behavioral?.behavioral_risk_score) || 0) * 100).toFixed(0)}%
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: intelResult.behavioral?.dormancy_reactivation ? '#ef4444' : '#22c55e' }}>
-                {intelResult.behavioral?.dormancy_reactivation ? '🔴 Dormancy Signal' : '🟢 No Dormancy'}
-              </div>
-              <div style={{ fontSize: 12, marginTop: 4, color: intelResult.behavioral?.odd_hour_activity ? '#f97316' : '#22c55e' }}>
-                {intelResult.behavioral?.odd_hour_activity ? '🟠 Odd Hours' : '🟢 Normal Hours'}
-              </div>
-              <div style={{ fontSize: 12, marginTop: 4, color: intelResult.behavioral?.device_ip_switching ? '#f97316' : '#22c55e' }}>
-                {intelResult.behavioral?.device_ip_switching ? '🟠 Device Switching' : '🟢 Stable Device'}
-              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>BEHAVIORAL</div>
+              {(() => {
+                const bs = intelResult.behavioral?.behavioral_risk_score || 0
+                const hasSignals = (intelResult.behavioral?.behavioral_signals || []).length > 0 || bs > 0
+                // Always show behavioral data if we have a result object
+                if (!intelResult.behavioral) return (
+                  <div className="stat-value" style={{ color: 'var(--text-muted)', fontSize: 22 }}>N/A</div>
+                )
+                return (
+                  <>
+                    <div className="stat-value" style={{ color: hasSignals ? '#10b981' : '#22c55e', fontSize: 26 }}>
+                      {hasSignals ? `${(bs * 100).toFixed(0)}%` : 'Clean'}
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 12, color: intelResult.behavioral?.dormancy_reactivation ? '#ef4444' : '#22c55e' }}>
+                      {intelResult.behavioral?.dormancy_reactivation ? 'Dormancy Signal' : 'No Dormancy'}
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 4, color: intelResult.behavioral?.odd_hour_activity ? '#f97316' : '#22c55e' }}>
+                      {intelResult.behavioral?.odd_hour_activity ? 'Odd Hours' : 'Normal Hours'}
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 4, color: intelResult.behavioral?.device_ip_switching ? '#f97316' : '#22c55e' }}>
+                      {intelResult.behavioral?.device_ip_switching ? 'Device Switching' : 'Stable Device'}
+                    </div>
+                    {(intelResult.behavioral?.behavioral_signals || []).map((s, i) => (
+                      <div key={i} style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>↳ {s}</div>
+                    ))}
+                  </>
+                )
+              })()}
             </div>
 
             {/* NLP */}
             <div className="stat-card" style={{ borderTop: '3px solid #f59e0b' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>🔤 NLP</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>NLP</div>
               {intelResult.nlp ? (
                 <>
                   <div className="stat-value" style={{ color: intelResult.nlp.is_suspicious ? '#ef4444' : '#22c55e', fontSize: 26 }}>
                     {(((intelResult.nlp?.nlp_risk_score) || 0) * 100).toFixed(0)}%
                   </div>
                   <div style={{ marginTop: 8, fontSize: 12, color: intelResult.nlp.is_suspicious ? '#ef4444' : '#22c55e' }}>
-                    {intelResult.nlp.is_suspicious ? '🔴 Suspicious Text' : '🟢 Clean Text'}
+                    {intelResult.nlp.is_suspicious ? 'Suspicious Text' : 'Clean Text'}
                   </div>
                   <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {(intelResult.nlp.matched_patterns || []).map((p, i) => (
@@ -564,7 +639,7 @@ function IntelligenceTab({
 
           {/* Root Cause */}
           <div style={{ background: 'var(--bg-tinted)', borderRadius: 10, padding: '16px 20px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>📋 Root Cause Analysis</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Root Cause Analysis</div>
             {(intelResult.root_cause?.explanation || []).length > 0 ? (
               <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {intelResult.root_cause.explanation.map((bullet, i) => (
@@ -580,15 +655,15 @@ function IntelligenceTab({
           {intelResult.decision && (
             <div style={{
               borderRadius: 10, padding: '16px 20px',
-              background: `${getRiskColor(intelResult.root_cause?.risk_tier)}0d`,
-              border: `1px solid ${getRiskColor(intelResult.root_cause?.risk_tier)}`
+              background: `${getRiskColorByTier(intelResult.root_cause?.risk_tier)}0d`,
+              border: `1px solid ${getRiskColorByTier(intelResult.root_cause?.risk_tier)}`
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>⚡ Automated Decision</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Automated Decision</div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <span style={{
                     padding: '6px 20px', borderRadius: 20, fontSize: 14, fontWeight: 800, letterSpacing: 1,
-                    background: getRiskColor(intelResult.root_cause?.risk_tier), color: 'white'
+                    background: getRiskColorByTier(intelResult.root_cause?.risk_tier), color: 'white'
                   }}>{intelResult.decision.action}</span>
                   {intelResult.decision.sla_hours > 0 && (
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>SLA: {intelResult.decision.sla_hours}h</span>
@@ -612,7 +687,7 @@ function IntelligenceTab({
 
       {/* ── Standalone NLP Scanner ── */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-subtle)' }}>
-        <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--text-primary)' }}>🔤 NLP Fraud Text Scanner</h3>
+        <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--text-primary)' }}>NLP Fraud Text Scanner</h3>
         <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>Scan any transaction note independently for fraud language.</p>
         <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
           <input
@@ -628,7 +703,7 @@ function IntelligenceTab({
               borderRadius: 8, color: 'var(--text-primary)', fontSize: 14
             }}
           />
-          <button id="btn-scan-nlp" className="btn btn-primary" onClick={fetchNLP}>🔍 Scan</button>
+          <button id="btn-scan-nlp" className="btn btn-primary" onClick={fetchNLP}>Scan</button>
         </div>
         {/* Preset examples */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -653,7 +728,7 @@ function IntelligenceTab({
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: nlpResult.is_suspicious ? '#ef4444' : '#22c55e' }}>
-                {nlpResult.is_suspicious ? '🔴 SUSPICIOUS TEXT DETECTED' : '🟢 CLEAN — No fraud patterns found'}
+                {nlpResult.is_suspicious ? 'SUSPICIOUS TEXT DETECTED' : 'CLEAN — No fraud patterns found'}
               </div>
               <div style={{ fontSize: 28, fontWeight: 800, color: nlpResult.is_suspicious ? '#ef4444' : '#22c55e' }}>
                 {(((nlpResult.nlp_risk_score) || 0) * 100).toFixed(0)}%
@@ -678,8 +753,8 @@ function IntelligenceTab({
       {/* ── Observability Metrics ── */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, margin: 0, color: 'var(--text-primary)' }}>📊 System Observability Metrics</h3>
-          <button id="btn-refresh-metrics" className="btn btn-secondary" onClick={fetchMetrics}>🔄 Refresh</button>
+          <h3 style={{ fontSize: 16, margin: 0, color: 'var(--text-primary)' }}>System Observability Metrics</h3>
+          <button id="btn-refresh-metrics" className="btn btn-secondary" onClick={fetchMetrics}>Refresh</button>
         </div>
         {!metricsData ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Click Refresh to load live metrics.</div>
@@ -813,7 +888,7 @@ function App() {
     addLog('Starting synthetic data generation...', 'info')
     try {
       const res = await apiCall('/api/generate')
-      addLog(`✅ ${res.message}`, 'success')
+      addLog(res.message, 'success')
       setPipelineState(s => ({ ...s, generated: true }))
     } catch { /* logged */ } finally { setLoading(false) }
   }
@@ -823,7 +898,7 @@ function App() {
     addLog('Building Unified Entity Graph...', 'info')
     try {
       const res = await apiCall('/api/ingest')
-      addLog(`✅ ${res.message}`, 'success')
+      addLog(res.message, 'success')
       setStats(res.details)
       setPipelineState(s => ({ ...s, ingested: true }))
     } catch { /* logged */ } finally { setLoading(false) }
@@ -834,7 +909,7 @@ function App() {
     addLog('Training GNN model (this may take a minute)...', 'warning')
     try {
       const res = await apiCall('/api/train')
-      addLog(`✅ ${res.message}`, 'success')
+      addLog(res.message, 'success')
       setTrainingResults(res.details)
       setPipelineState(s => ({ ...s, trained: true }))
     } catch { /* logged */ } finally { setLoading(false) }
@@ -845,7 +920,7 @@ function App() {
     addLog('Running risk analysis & cluster detection...', 'info')
     try {
       const res = await apiCall('/api/analyze')
-      addLog(`✅ ${res.message}`, 'success')
+      addLog(res.message, 'success')
       setRiskDist(res.details?.risk_distribution)
       setPipelineState(s => ({ ...s, analyzed: true }))
       // Fetch accounts and clusters
@@ -856,12 +931,12 @@ function App() {
 
   const runFullPipeline = async () => {
     // Start the background pipeline job
-    addLog('🚀 Starting full pipeline (background)...', 'info')
+    addLog('Starting full pipeline (background)...', 'info')
     setPipelineJob(null)
     setLoading(true)
     try {
       await apiCall('/api/pipeline/run')
-      addLog('⏳ Pipeline running in background — progress updates below...', 'info')
+      addLog('Pipeline running in background — progress updates below...', 'info')
     } catch {
       setLoading(false)
       return
@@ -874,14 +949,14 @@ function App() {
         setPipelineJob(status)
 
         if (status.status === 'running') {
-          addLog(`🔄 [${status.progress_pct}%] ${status.current_step}...`, 'info')
+          addLog(`[${status.progress_pct}%] ${status.current_step}...`, 'info')
           pipelinePollRef.current = setTimeout(poll, 2000)
         } else if (status.status === 'complete') {
           const r = status.last_result || {}
-          addLog(`✅ Pipeline complete in ${r.total_duration_s}s`, 'success')
+          addLog(`Pipeline complete in ${r.total_duration_s}s`, 'success')
           addLog(`   Test AUC: ${r.test_auc?.toFixed(4)} | Flagged: ${r.flagged} | Clusters: ${r.clusters}`, 'success')
-          if (r.overfitting_warning) addLog('⚠️  Val-Test AUC gap > 0.05 detected (check for overfitting)', 'warning')
-          if (r.stopped_early) addLog(`⏹️  Early stopping triggered at epoch ${r.epochs_trained}`, 'info')
+          if (r.overfitting_warning) addLog('Val-Test AUC gap > 0.05 detected (check for overfitting)', 'warning')
+          if (r.stopped_early) addLog(`Early stopping triggered at epoch ${r.epochs_trained}`, 'info')
           setTrainingResults({
             test_auc: r.test_auc,
             test_average_precision: r.test_average_precision,
@@ -896,11 +971,11 @@ function App() {
           fetchAccounts()
           fetchClusters()
         } else if (status.status === 'failed' || status.status === 'cancelled') {
-          addLog(`❌ Pipeline ${status.status}: ${status.error}`, 'error')
+          addLog(`Pipeline ${status.status}: ${status.error}`, 'error')
           setLoading(false)
         }
       } catch (e) {
-        addLog(`❌ Status poll error: ${e.message}`, 'error')
+        addLog(`Status poll error: ${e.message}`, 'error')
         setLoading(false)
       }
     }
@@ -913,7 +988,7 @@ function App() {
     if (pipelinePollRef.current) clearTimeout(pipelinePollRef.current)
     try {
       await apiCall('/api/pipeline/cancel', 'POST')
-      addLog('⏹️  Pipeline cancellation requested', 'warning')
+      addLog('Pipeline cancellation requested', 'warning')
       setLoading(false)
     } catch { /* */ }
   }
@@ -938,7 +1013,7 @@ function App() {
     try {
       const res = await apiCall(`/api/explain/${accountId}`, 'GET')
       setExplanation(res)
-      addLog(`✅ Explanation generated for ${accountId}`, 'success')
+      addLog(`Explanation generated for ${accountId}`, 'success')
     } catch { /* */ }
   }
 
@@ -947,7 +1022,7 @@ function App() {
     try {
       const res = await apiCall('/api/report', 'GET')
       setReport(res)
-      addLog('✅ Audit report generated', 'success')
+      addLog('Audit report generated', 'success')
     } catch { /* */ }
   }
 
@@ -957,7 +1032,7 @@ function App() {
     try {
       const res = await apiCall('/api/graph/visual?max_nodes=500', 'GET')
       setGraphData(res)
-      addLog(`✅ Graph loaded: ${res.showing_nodes} nodes, ${res.showing_links} links`, 'success')
+      addLog(`Graph loaded: ${res.showing_nodes} nodes, ${res.showing_links} links`, 'success')
     } catch { /* */ } finally { setGraphLoading(false) }
   }
 
@@ -968,7 +1043,7 @@ function App() {
     try {
       const res = await apiCall('/api/sanctions/summary', 'GET')
       setSanctions(res)
-      addLog(`✅ Sanctions screening complete: ${res.total_alerts} alerts`, 'success')
+      addLog(`Sanctions screening complete: ${res.total_alerts} alerts`, 'success')
     } catch { /* */ }
   }
 
@@ -977,19 +1052,19 @@ function App() {
     try {
       const res = await apiCall('/api/report/sar', 'GET')
       setSarReport(res)
-      addLog('✅ SAR report generated', 'success')
+      addLog('SAR report generated', 'success')
     } catch { /* */ }
   }
 
   const fetchIntelligence = async () => {
     if (!intelAccount.trim()) return
     setIntelLoading(true)
-    addLog(`🧠 Running intelligence analysis for ${intelAccount}...`, 'info')
+    addLog(`Running intelligence analysis for ${intelAccount}...`, 'info')
     try {
       const textParam = intelText.trim() ? `?text=${encodeURIComponent(intelText.trim())}` : ''
       const res = await apiCall(`/api/intelligence/analyze/${intelAccount.trim()}${textParam}`, 'GET')
       setIntelResult(res)
-      addLog(`✅ Intelligence analysis complete for ${intelAccount}`, 'success')
+      addLog(`Intelligence analysis complete for ${intelAccount}`, 'success')
     } catch { /* */ } finally { setIntelLoading(false) }
   }
 
@@ -1032,19 +1107,6 @@ function App() {
 
   // ─── Helpers ─────────────────────────────────────────────
 
-  const getRiskColor = (score) => {
-    if (score >= 0.85) return 'var(--color-danger)'
-    if (score >= 0.6) return 'var(--color-warning)'
-    if (score >= 0.4) return 'var(--accent-blue)'
-    return 'var(--accent-green)'
-  }
-
-  const getRiskLevel = (score) => {
-    if (score >= 0.85) return 'high'
-    if (score >= 0.6) return 'medium'
-    return 'low'
-  }
-
   const getActionClass = (action) => {
     return (action || '').toLowerCase()
   }
@@ -1071,7 +1133,7 @@ function App() {
         {/* Navigation */}
         <nav className="flex-1 py-6 px-4 space-y-2">
           {[
-            { id: 'agent', icon: 'smart_toy', label: '🤖 Agent Workbench' },
+            { id: 'agent', icon: 'smart_toy', label: 'Agent Workbench' },
             { id: 'pipeline', icon: 'account_tree', label: 'Pipeline Engine' },
             { id: 'graph', icon: 'hub', label: 'Entity Graph' },
             { id: 'accounts', icon: 'person_search', label: 'Account Risk' },
@@ -1183,15 +1245,20 @@ function App() {
                   disabled={loading}
                   className="bg-primary text-on-primary hover:bg-primary-fixed hover:text-on-primary-fixed font-bold py-4 px-8 rounded-2xl shadow-lg transition-all flex items-center gap-3 text-lg border border-transparent disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {loading && <span className="material-symbols-outlined animate-spin">refresh</span>}
-                  {loading ? 'Pipeline Running...' : '🚀 Run Full Pipeline'}
+                  {loading ? (
+                    <span className="material-symbols-outlined animate-spin">refresh</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-xl">play_arrow</span>
+                  )}
+                  {loading ? 'Pipeline Running...' : 'Run Full Pipeline'}
                 </button>
                 {loading && (
                   <button
                     onClick={cancelPipeline}
                     className="bg-error/10 text-error hover:bg-error/20 font-semibold py-4 px-6 rounded-2xl border border-error/30 transition-all flex items-center gap-2 cursor-pointer"
                   >
-                    ⏹ Cancel
+                    <span className="material-symbols-outlined text-sm">stop</span>
+                    <span>Cancel</span>
                   </button>
                 )}
               </div>
@@ -1200,8 +1267,18 @@ function App() {
               {(loading || (pipelineJob && pipelineJob.status === 'complete')) && (
                 <div className="glass-card rounded-2xl p-5 mb-6 border border-outline-variant">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">
-                      {pipelineJob?.status === 'complete' ? '✅ Pipeline Complete' : '⚡ Pipeline Progress'}
+                    <span className="text-sm font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+                      {pipelineJob?.status === 'complete' ? (
+                        <>
+                          <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
+                          <span>Pipeline Complete</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-purple-600 text-base">bolt</span>
+                          <span>Pipeline Progress</span>
+                        </>
+                      )}
                     </span>
                     <span className="text-sm font-mono text-primary font-bold">
                       {pipelineJob?.progress_pct ?? 0}%
@@ -1221,15 +1298,18 @@ function App() {
                   </div>
                   {/* Current step */}
                   {pipelineJob?.current_step && (
-                    <div className="text-sm text-on-surface-variant mb-3" style={{ fontStyle: pipelineJob.status === 'running' ? 'italic' : 'normal' }}>
-                      {pipelineJob.status === 'running' ? `🔄 ${pipelineJob.current_step}...` : pipelineJob.current_step}
+                    <div className="text-sm text-on-surface-variant mb-3 flex items-center gap-2" style={{ fontStyle: pipelineJob.status === 'running' ? 'italic' : 'normal' }}>
+                      {pipelineJob.status === 'running' && (
+                        <span className="material-symbols-outlined text-xs animate-spin">progress_activity</span>
+                      )}
+                      <span>{pipelineJob.current_step}</span>
                     </div>
                   )}
                   {/* Step timings */}
                   {pipelineJob?.steps_done?.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {pipelineJob.steps_done.map((s, i) => (
-                        <span key={i} style={{
+                        <span key={i} className="inline-flex items-center gap-1" style={{
                           background: 'var(--bg-tinted)',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: 8,
@@ -1237,7 +1317,8 @@ function App() {
                           fontSize: 12,
                           color: 'var(--text-secondary)',
                         }}>
-                          ✅ {s.name} — <strong>{s.duration_s}s</strong>
+                          <span className="material-symbols-outlined text-emerald-500 text-xs">check_circle</span>
+                          <span>{s.name} — <strong>{s.duration_s}s</strong></span>
                         </span>
                       ))}
                     </div>
@@ -1528,7 +1609,7 @@ function App() {
                   )}
                   <button className="btn btn-primary btn-sm" onClick={fetchGraphData}
                     disabled={graphLoading || !pipelineState.ingested}>
-                    {graphLoading ? <span className="spinner" /> : '🔄'} Load Graph
+                    {graphLoading ? <span className="spinner" /> : null} Load Graph
                   </button>
                 </div>
               </div>
@@ -1573,7 +1654,7 @@ function App() {
 
               {!graphData ? (
                 <div className="empty-state" style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border-subtle)' }}>
-                  <div className="empty-state-icon">🔗</div>
+                  <div className="empty-state-icon"><span className="material-symbols-outlined text-4xl">hub</span></div>
                   <div className="empty-state-title">Graph Not Loaded</div>
                   <div className="empty-state-desc">
                     {pipelineState.ingested
@@ -1600,7 +1681,7 @@ function App() {
                       <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>Type: {hoveredNode.entity_type}</div>
                       {hoveredNode.entity_type === 'Account' && (
                         <>
-                          <div>Mule: {hoveredNode.is_mule ? '🚨 Yes' : '✅ No'}</div>
+                          <div>Mule: {hoveredNode.is_mule ? 'Yes' : 'No'}</div>
                           {hoveredNode.risk_score > 0 && (
                             <div style={{ color: hoveredNode.risk_score >= 0.85 ? 'var(--color-danger)' : 'var(--text-secondary)' }}>
                               Risk: {(hoveredNode.risk_score * 100).toFixed(1)}%
@@ -1677,10 +1758,10 @@ function App() {
           {/* ═══ Accounts Tab ═══ */}
           {activeTab === 'accounts' && (
             <div>
-              <h2 className="section-title">👤 Account Risk Scores</h2>
+              <h2 className="section-title">Account Risk Scores</h2>
               {accounts.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-state-icon">🔍</div>
+                  <div className="empty-state-icon"><span className="material-symbols-outlined text-4xl">search</span></div>
                   <div className="empty-state-title">No Data Available</div>
                   <div className="empty-state-desc">Run the pipeline first to generate risk scores.</div>
                 </div>
@@ -1718,11 +1799,11 @@ function App() {
                               {acc.recommended_action}
                             </span>
                           </td>
-                          <td>{acc.is_flagged ? '🚨' : '✅'}</td>
+                          <td>{acc.is_flagged ? 'Yes' : 'No'}</td>
                           <td>
                             <button className="btn btn-sm btn-secondary"
                               onClick={() => { fetchExplanation(acc.account_id); setActiveTab('xai') }}>
-                              🧠 Explain
+                              Explain
                             </button>
                           </td>
                         </tr>
@@ -1737,10 +1818,10 @@ function App() {
           {/* ═══ Clusters Tab ═══ */}
           {activeTab === 'clusters' && (
             <div>
-              <h2 className="section-title">🕸️ Detected Mule Ring Clusters</h2>
+              <h2 className="section-title">Detected Mule Ring Clusters</h2>
               {clusters.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-state-icon">🕸️</div>
+                  <div className="empty-state-icon"><span className="material-symbols-outlined text-4xl">group_work</span></div>
                   <div className="empty-state-title">No Clusters Detected</div>
                   <div className="empty-state-desc">Run analysis to detect mule ring clusters.</div>
                 </div>
@@ -1812,10 +1893,10 @@ function App() {
           {/* ═══ XAI Tab ═══ */}
           {activeTab === 'xai' && (
             <div>
-              <h2 className="section-title">🧠 Explainable AI Auditor</h2>
+              <h2 className="section-title">Explainable AI Auditor</h2>
               {!explanation ? (
                 <div className="empty-state">
-                  <div className="empty-state-icon">🧠</div>
+                  <div className="empty-state-icon"><span className="material-symbols-outlined text-4xl">psychology</span></div>
                   <div className="empty-state-title">No Explanation Selected</div>
                   <div className="empty-state-desc">
                     Click "Explain" on an account from the Accounts tab, or click an account in a cluster.
@@ -1956,17 +2037,17 @@ function App() {
           {/* ═══ Reports Tab ═══ */}
           {activeTab === 'report' && (
             <div>
-              <h2 className="section-title">📄 Audit Reports</h2>
+              <h2 className="section-title">Audit Reports</h2>
               <div style={{ marginBottom: 20 }}>
                 <button id="btn-generate-report" className="btn btn-primary" onClick={fetchReport}
                   disabled={!pipelineState.analyzed}>
-                  📄 Generate Full Audit Report
+                  Generate Full Audit Report
                 </button>
               </div>
 
               {!report ? (
                 <div className="empty-state">
-                  <div className="empty-state-icon">📄</div>
+                  <div className="empty-state-icon"><span className="material-symbols-outlined text-4xl">description</span></div>
                   <div className="empty-state-title">No Report Generated</div>
                   <div className="empty-state-desc">
                     Run the pipeline and click "Generate Full Audit Report".
@@ -1991,7 +2072,7 @@ function App() {
 
                   <div className="card">
                     <div className="card-header">
-                      <span className="card-title">📋 Report JSON</span>
+                      <span className="card-title">Report JSON</span>
                       <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                         {report.report_id}
                       </span>
@@ -2014,15 +2095,15 @@ function App() {
             <div className="tab-content">
               <div className="section-card">
                 <div className="section-header">
-                  <h2 className="section-title">📡 Real-Time Transaction Feed</h2>
+                  <h2 className="section-title">Real-Time Transaction Feed</h2>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: liveConnected ? '#22c55e' : '#6b7280', display: 'inline-block' }} />
                       {liveConnected ? 'LIVE' : 'Disconnected'}
                     </span>
                     {!liveConnected
-                      ? <button className="btn btn-primary" onClick={startLiveFeed}>▶ Start Feed</button>
-                      : <button className="btn btn-secondary" onClick={stopLiveFeed}>⏹ Stop</button>
+                      ? <button className="btn btn-primary" onClick={startLiveFeed}>Start Feed</button>
+                      : <button className="btn btn-secondary" onClick={stopLiveFeed}>Stop</button>
                     }
                   </div>
                 </div>
@@ -2031,7 +2112,7 @@ function App() {
                 </p>
                 {liveEvents.length === 0 ? (
                   <div className="empty-state">
-                    <div style={{ fontSize: 48 }}>📡</div>
+                    <div style={{ fontSize: 48 }}><span className="material-symbols-outlined text-4xl">dynamic_feed</span></div>
                     <h3>Feed Not Started</h3>
                     <p>Click "Start Feed" to begin streaming live transaction events.</p>
                   </div>
@@ -2076,16 +2157,16 @@ function App() {
             <div className="tab-content">
               <div className="section-card">
                 <div className="section-header">
-                  <h2 className="section-title">📋 FIU-IND Suspicious Activity Report</h2>
+                  <h2 className="section-title">FIU-IND Suspicious Activity Report</h2>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button className="btn btn-primary" onClick={fetchSAR}>
-                      {sarReport ? '🔄 Regenerate SAR' : '📋 Generate SAR'}
+                      {sarReport ? 'Regenerate SAR' : 'Generate SAR'}
                     </button>
                   </div>
                 </div>
                 {!sarReport ? (
                   <div className="empty-state">
-                    <div style={{ fontSize: 48 }}>📋</div>
+                    <div style={{ fontSize: 48 }}><span className="material-symbols-outlined text-4xl">assessment</span></div>
                     <h3>SAR Not Generated</h3>
                     <p>Run the pipeline first, then click "Generate SAR" to produce a FIU-IND compliant Suspicious Activity Report.</p>
                   </div>
@@ -2136,7 +2217,7 @@ function App() {
 
                     {/* Recommended Actions */}
                     <div style={{ background: 'var(--surface-elevated)', borderRadius: 10, padding: 16 }}>
-                      <h3 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--text-secondary)' }}>📌 Recommended Regulatory Actions</h3>
+                      <h3 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--text-secondary)' }}>Recommended Regulatory Actions</h3>
                       <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {sarReport.executive_summary?.recommended_regulatory_actions?.map((a, i) => (
                           <li key={i} style={{ fontSize: 13, color: 'var(--text-primary)' }}>{a}</li>
@@ -2147,7 +2228,7 @@ function App() {
                     {/* Suspicious Subjects */}
                     {sarReport.suspicious_subjects?.length > 0 && (
                       <div>
-                        <h3 style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 10 }}>🚨 Suspicious Subjects ({sarReport.suspicious_subjects.length})</h3>
+                        <h3 style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 10 }}>Suspicious Subjects ({sarReport.suspicious_subjects.length})</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {sarReport.suspicious_subjects.slice(0, 10).map((subj, i) => (
                             <div key={i} className="account-card" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center' }}>
@@ -2155,7 +2236,7 @@ function App() {
                                 <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>{subj.subject_reference}</div>
                                 <div style={{ fontSize: 13, marginTop: 4 }}>
                                   Activity: <strong>{subj.suspicious_activity_types?.join(', ')}</strong>
-                                  {subj.sanctions_alert && <span style={{ marginLeft: 8, color: '#ef4444', fontWeight: 700 }}>⚠️ SANCTIONS HIT</span>}
+                                  {subj.sanctions_alert && <span style={{ marginLeft: 8, color: '#ef4444', fontWeight: 700 }}>SANCTIONS HIT</span>}
                                 </div>
                                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                                   Filing: {subj.regulatory_filing}
@@ -2164,7 +2245,7 @@ function App() {
                                 {subj.xai_auditor && (
                                   <div style={{ marginTop: 12, background: 'var(--bg-tinted)', borderRadius: 8, padding: 10, border: '1px solid var(--border-subtle)' }}>
                                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                                      🧠 XAI Auditor (SAR)
+                                      XAI Auditor (SAR)
                                     </div>
                                     {subj.xai_auditor.plain_english_summary && (
                                       <div style={{
@@ -2272,7 +2353,7 @@ function App() {
 
                     {/* Regulatory Framework */}
                     <div style={{ background: 'var(--surface-elevated)', borderRadius: 10, padding: 16 }}>
-                      <h3 style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>📜 Regulatory Framework</h3>
+                      <h3 style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>Regulatory Framework</h3>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {sarReport.report_header?.regulatory_framework?.map((r, i) => (
                           <span key={i} style={{ background: '#1e293b', border: '1px solid #334155', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#94a3b8' }}>

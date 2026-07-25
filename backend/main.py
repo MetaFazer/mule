@@ -439,6 +439,21 @@ async def explain_account(account_id: str):
             state["node_mapping"],
         )
         explanation = explainer.explain_account(account_id)
+
+        # ── Override confidence_score with calibrated rank-based score ──
+        # Raw sigmoid from the model is uncalibrated (typically 0.02–0.58 under
+        # class imbalance). The Account Risk tab shows the rank-calibrated
+        # mule_probability from predict_scores(). Unify them here so XAI
+        # always shows the same score as Account Risk.
+        if state["risk_scores"]:
+            calibrated = next(
+                (r["mule_probability"] for r in state["risk_scores"]
+                 if r.get("account_id") == account_id),
+                None,
+            )
+            if calibrated is not None:
+                explanation["confidence_score"] = round(calibrated, 4)
+
         state["explanations"][account_id] = explanation
         return explanation
     except Exception as e:
@@ -686,13 +701,13 @@ async def _run_pipeline_background():
         job["current_step"] = name
         job["step_index"] = idx
         job["progress_pct"] = int((idx / len(_STEPS)) * 100)
-        print(f"   🔄 Pipeline [{idx+1}/{len(_STEPS)}]: {name}")
+        print(f"   Pipeline [{idx+1}/{len(_STEPS)}]: {name}")
         return _time.time()
 
     def _step_done(name: str, t0: float):
         dur = round(_time.time() - t0, 1)
         job["steps_done"].append({"name": name, "duration_s": dur})
-        print(f"   ✅ {name} — {dur}s")
+        print(f"   {name} — {dur}s")
 
     try:
         # ── Step 1: Generate ───────────────────────────────────────
@@ -771,14 +786,14 @@ async def _run_pipeline_background():
             "mule_accounts": int(mule_count),
             "total_duration_s": total_duration,
         }
-        print(f"\n🚀 Pipeline complete in {total_duration}s")
+        print(f"\nPipeline complete in {total_duration}s")
 
     except Exception as e:
         import traceback
         job["status"] = "failed"
         job["error"] = str(e)
         job["completed_at"] = _time.time()
-        print(f"❌ Pipeline failed: {e}")
+        print(f"Pipeline failed: {e}")
         traceback.print_exc()
 
 
